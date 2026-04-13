@@ -104,7 +104,22 @@ async function buildAll() {
     sourcemap: "linked",
     plugins: [
       // pino relies on workers to handle logging, instead of externalizing it we use a plugin to handle it
-      esbuildPluginPino({ transports: ["pino-pretty"] })
+      esbuildPluginPino({ transports: ["pino-pretty"] }),
+      // yahoo-finance2 test files import Deno-specific packages; ignore them at build time
+      {
+        name: "ignore-yahoo-finance2-tests",
+        setup(build) {
+          build.onResolve({ filter: /yahoo-finance2.*\/tests\// }, () => {
+            return { path: "ignored-yahoo-tests", namespace: "ignored" };
+          });
+          build.onLoad({ filter: /.*/, namespace: "ignored" }, () => {
+            return { contents: "", loader: "js" };
+          });
+          build.onResolve({ filter: /^@std\/|^@gadicc\// }, () => {
+            return { path: "ignored-std-testing", namespace: "ignored" };
+          });
+        },
+      },
     ],
     // Make sure packages that are cjs only (e.g. express) but are bundled continue to work in our esm output file
     banner: {

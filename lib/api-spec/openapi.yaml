@@ -3,13 +3,18 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Stock Watchlist Supercharger API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: watchlist
+    description: Watchlist management
+  - name: stocks
+    description: Stock data and metrics
+
 paths:
   /healthz:
     get:
@@ -24,6 +29,161 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /watchlist:
+    get:
+      operationId: getWatchlist
+      tags: [watchlist]
+      summary: Get user watchlist
+      description: Returns the list of stock tickers in the user's watchlist
+      parameters:
+        - name: username
+          in: query
+          required: false
+          schema:
+            type: string
+            default: "demo"
+      responses:
+        "200":
+          description: Watchlist retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WatchlistEntry"
+
+  /watchlist/add:
+    post:
+      operationId: addToWatchlist
+      tags: [watchlist]
+      summary: Add a ticker to the watchlist
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddToWatchlistBody"
+      responses:
+        "201":
+          description: Ticker added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WatchlistEntry"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Ticker already in watchlist
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /watchlist/{id}:
+    delete:
+      operationId: removeFromWatchlist
+      tags: [watchlist]
+      summary: Remove a ticker from the watchlist
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Removed successfully
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /stocks/{ticker}/metrics:
+    get:
+      operationId: getStockMetrics
+      tags: [stocks]
+      summary: Get current metrics for a stock ticker
+      parameters:
+        - name: ticker
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Stock metrics retrieved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StockMetrics"
+        "404":
+          description: Ticker not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /stocks/{ticker}/history:
+    get:
+      operationId: getStockHistory
+      tags: [stocks]
+      summary: Get historical metric data for charting
+      parameters:
+        - name: ticker
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: period
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: ["1mo", "3mo", "6mo", "1y", "2y"]
+            default: "6mo"
+      responses:
+        "200":
+          description: Historical data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StockHistory"
+        "404":
+          description: Ticker not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /watchlist/bulk-metrics:
+    get:
+      operationId: getWatchlistMetrics
+      tags: [watchlist]
+      summary: Get current metrics for all tickers in the watchlist
+      parameters:
+        - name: username
+          in: query
+          required: false
+          schema:
+            type: string
+            default: "demo"
+      responses:
+        "200":
+          description: All watchlist metrics
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/StockMetrics"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +194,105 @@ components:
       required:
         - status
 
+    WatchlistEntry:
+      type: object
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        ticker:
+          type: string
+        addedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - username
+        - ticker
+        - addedAt
+
+    AddToWatchlistBody:
+      type: object
+      properties:
+        ticker:
+          type: string
+        username:
+          type: string
+      required:
+        - ticker
+
+    StockMetrics:
+      type: object
+      properties:
+        ticker:
+          type: string
+        companyName:
+          type: ["string", "null"]
+        currentPrice:
+          type: ["number", "null"]
+        peRatioForward:
+          type: ["number", "null"]
+        epsGrowthYoy:
+          type: ["number", "null"]
+        debtToEquity:
+          type: ["number", "null"]
+        ma200:
+          type: ["number", "null"]
+        ma50:
+          type: ["number", "null"]
+        rsi:
+          type: ["number", "null"]
+        shortInterestPct:
+          type: ["number", "null"]
+        putCallRatio:
+          type: ["number", "null"]
+        beta:
+          type: ["number", "null"]
+        lastUpdated:
+          type: ["string", "null"]
+          format: date-time
+      required:
+        - ticker
+
+    StockHistory:
+      type: object
+      properties:
+        ticker:
+          type: string
+        period:
+          type: string
+        dataPoints:
+          type: array
+          items:
+            $ref: "#/components/schemas/HistoricalDataPoint"
+      required:
+        - ticker
+        - period
+        - dataPoints
+
+    HistoricalDataPoint:
+      type: object
+      properties:
+        date:
+          type: string
+        price:
+          type: ["number", "null"]
+        ma50:
+          type: ["number", "null"]
+        ma200:
+          type: ["number", "null"]
+        rsi:
+          type: ["number", "null"]
+        volume:
+          type: ["number", "null"]
+      required:
+        - date
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error

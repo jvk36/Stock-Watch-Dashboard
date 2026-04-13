@@ -1,0 +1,210 @@
+import React, { useState } from "react";
+import { 
+  useGetWatchlist, 
+  useGetWatchlistMetrics, 
+  useRemoveFromWatchlist, 
+  useAddToWatchlist,
+  getGetWatchlistQueryKey,
+  getGetWatchlistMetricsQueryKey
+} from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
+import { ChartModal } from "./ChartModal";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Trash2, Plus, Loader2 } from "lucide-react";
+import {
+  getPeColor, getEpsGrowthColor, getDebtEquityColor, getMaColor,
+  getRsiColor, getShortInterestColor, getPutCallColor, getBetaColor,
+  formatNum, formatPct, formatCurrency
+} from "@/lib/color-utils";
+
+const DEMO_USERNAME = "demo_user";
+
+export default function Dashboard() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  
+  const [newTicker, setNewTicker] = useState("");
+  const [selectedTicker, setSelectedTicker] = useState<{ticker: string, name?: string | null} | null>(null);
+
+  const { data: watchlist, isLoading: loadingWatchlist } = useGetWatchlist({ username: DEMO_USERNAME });
+  const { data: metrics, isLoading: loadingMetrics } = useGetWatchlistMetrics({ username: DEMO_USERNAME }, { query: { refetchInterval: 60000 } });
+
+  const addMutation = useAddToWatchlist({
+    mutation: {
+      onSuccess: () => {
+        setNewTicker("");
+        queryClient.invalidateQueries({ queryKey: getGetWatchlistQueryKey({ username: DEMO_USERNAME }) });
+        queryClient.invalidateQueries({ queryKey: getGetWatchlistMetricsQueryKey({ username: DEMO_USERNAME }) });
+      },
+      onError: (err) => {
+        toast({ title: "Failed to add ticker", description: err.error, variant: "destructive" });
+      }
+    }
+  });
+
+  const removeMutation = useRemoveFromWatchlist({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getGetWatchlistQueryKey({ username: DEMO_USERNAME }) });
+        queryClient.invalidateQueries({ queryKey: getGetWatchlistMetricsQueryKey({ username: DEMO_USERNAME }) });
+      }
+    }
+  });
+
+  const handleAdd = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!newTicker.trim()) return;
+    addMutation.mutate({ data: { ticker: newTicker.toUpperCase(), username: DEMO_USERNAME } });
+  };
+
+  const isLoading = loadingWatchlist || loadingMetrics;
+
+  return (
+    <div className="min-h-screen bg-background text-foreground font-sans p-4 md:p-8">
+      <div className="max-w-[1400px] mx-auto space-y-6">
+        
+        <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-border pb-6">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-white font-mono uppercase">
+              Stock Watchlist <span className="text-primary">Supercharger</span>
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">Professional high-density terminal view</p>
+          </div>
+
+          <form onSubmit={handleAdd} className="flex items-center gap-2">
+            <Input
+              value={newTicker}
+              onChange={(e) => setNewTicker(e.target.value)}
+              placeholder="Enter ticker (e.g. AAPL)"
+              className="w-48 font-mono uppercase bg-card text-foreground border-border focus-visible:ring-primary h-9"
+              data-testid="input-ticker"
+            />
+            <Button 
+              type="submit" 
+              disabled={addMutation.isPending || !newTicker.trim()}
+              size="sm"
+              className="h-9 font-mono font-bold tracking-wider"
+              data-testid="button-add"
+            >
+              {addMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
+              ADD
+            </Button>
+          </form>
+        </header>
+
+        <main className="bg-card border border-border rounded-md shadow-lg overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left border-collapse whitespace-nowrap">
+              <thead className="text-xs uppercase bg-muted/50 text-muted-foreground font-mono">
+                <tr>
+                  <th className="px-4 py-3 font-semibold border-b border-border sticky left-0 z-10 bg-card">Ticker</th>
+                  <th className="px-4 py-3 font-semibold border-b border-border">Price</th>
+                  <th className="px-4 py-3 font-semibold border-b border-border">P/E (Fwd)</th>
+                  <th className="px-4 py-3 font-semibold border-b border-border">EPS Gr (YoY)</th>
+                  <th className="px-4 py-3 font-semibold border-b border-border">Debt/Eq</th>
+                  <th className="px-4 py-3 font-semibold border-b border-border">200d MA</th>
+                  <th className="px-4 py-3 font-semibold border-b border-border">50d MA</th>
+                  <th className="px-4 py-3 font-semibold border-b border-border">RSI</th>
+                  <th className="px-4 py-3 font-semibold border-b border-border">Short Int</th>
+                  <th className="px-4 py-3 font-semibold border-b border-border">P/C Ratio</th>
+                  <th className="px-4 py-3 font-semibold border-b border-border">Beta</th>
+                  <th className="px-4 py-3 font-semibold border-b border-border text-center">Act</th>
+                </tr>
+              </thead>
+              <tbody className="font-mono divide-y divide-border">
+                {isLoading ? (
+                  Array.from({ length: 5 }).map((_, i) => (
+                    <tr key={i}>
+                      {Array.from({ length: 12 }).map((_, j) => (
+                        <td key={j} className="px-4 py-3"><Skeleton className="h-5 w-full bg-muted" /></td>
+                      ))}
+                    </tr>
+                  ))
+                ) : !watchlist || watchlist.length === 0 ? (
+                  <tr>
+                    <td colSpan={12} className="px-4 py-12 text-center text-muted-foreground">
+                      <p>No stocks in your watchlist.</p>
+                      <p className="text-xs mt-1">Add your first stock ticker above to get started.</p>
+                    </td>
+                  </tr>
+                ) : (
+                  watchlist.map((entry) => {
+                    const m = metrics?.find(m => m.ticker === entry.ticker);
+                    if (!m) return (
+                      <tr key={entry.id} data-testid={`row-stock-${entry.ticker}`}>
+                        <td className="px-4 py-2 sticky left-0 z-10 bg-card border-r border-border font-bold">{entry.ticker}</td>
+                        <td colSpan={10} className="px-4 py-2 text-muted-foreground text-xs"><Skeleton className="h-5 w-24 bg-muted" /></td>
+                        <td className="px-4 py-2 text-center">
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={() => removeMutation.mutate({ id: entry.id })}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+
+                    return (
+                      <tr key={entry.id} className="hover:bg-muted/20 transition-colors" data-testid={`row-stock-${entry.ticker}`}>
+                        <td className="px-4 py-2 sticky left-0 z-10 bg-card border-r border-border transition-colors group-hover:bg-muted/20">
+                          <button 
+                            className="text-primary font-bold hover:underline cursor-pointer flex flex-col text-left focus:outline-none focus-visible:ring-1 focus-visible:ring-primary rounded"
+                            onClick={() => setSelectedTicker({ ticker: m.ticker, name: m.companyName })}
+                            data-testid={`cell-ticker-${entry.ticker}`}
+                          >
+                            <span>{m.ticker}</span>
+                            {m.companyName && <span className="text-[10px] text-muted-foreground font-sans font-normal truncate max-w-[120px]">{m.companyName}</span>}
+                          </button>
+                        </td>
+                        <td className="px-4 py-2">{formatCurrency(m.currentPrice)}</td>
+                        <td className={`px-4 py-2 text-right ${getPeColor(m.peRatioForward)}`}>{formatNum(m.peRatioForward)}</td>
+                        <td className={`px-4 py-2 text-right ${getEpsGrowthColor(m.epsGrowthYoy)}`}>{formatPct(m.epsGrowthYoy)}</td>
+                        <td className={`px-4 py-2 text-right ${getDebtEquityColor(m.debtToEquity)}`}>{formatNum(m.debtToEquity)}</td>
+                        <td className={`px-4 py-2 text-right ${getMaColor(m.currentPrice, m.ma200)}`}>{formatNum(m.ma200)}</td>
+                        <td className={`px-4 py-2 text-right ${getMaColor(m.currentPrice, m.ma50)}`}>{formatNum(m.ma50)}</td>
+                        <td className={`px-4 py-2 text-right ${getRsiColor(m.rsi)}`}>{formatNum(m.rsi, 1)}</td>
+                        <td className={`px-4 py-2 text-right ${getShortInterestColor(m.shortInterestPct)}`}>{formatPct(m.shortInterestPct)}</td>
+                        <td className={`px-4 py-2 text-right ${getPutCallColor(m.putCallRatio)}`}>{formatNum(m.putCallRatio)}</td>
+                        <td className={`px-4 py-2 text-right ${getBetaColor(m.beta)}`}>{formatNum(m.beta)}</td>
+                        <td className="px-4 py-2 text-center">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                            onClick={() => removeMutation.mutate({ id: entry.id })}
+                            disabled={removeMutation.isPending}
+                            data-testid={`button-delete-${entry.id}`}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            <span className="sr-only">Remove {entry.ticker}</span>
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </main>
+
+        <div className="flex flex-wrap gap-4 text-xs font-mono text-muted-foreground pt-2 border-t border-border">
+          <div className="flex items-center gap-2">
+            <span className="font-bold">LEGEND:</span>
+          </div>
+          <div className="flex items-center gap-1"><span className="w-3 h-3 inline-block bg-[hsl(142,76%,36%)] rounded-sm"></span> Bullish / Healthy</div>
+          <div className="flex items-center gap-1"><span className="w-3 h-3 inline-block bg-[hsl(45,93%,47%)] rounded-sm"></span> Neutral / Warning</div>
+          <div className="flex items-center gap-1"><span className="w-3 h-3 inline-block bg-[hsl(0,84%,60%)] rounded-sm"></span> Bearish / Danger</div>
+        </div>
+
+      </div>
+
+      <ChartModal 
+        ticker={selectedTicker?.ticker || null} 
+        companyName={selectedTicker?.name} 
+        onClose={() => setSelectedTicker(null)} 
+      />
+    </div>
+  );
+}

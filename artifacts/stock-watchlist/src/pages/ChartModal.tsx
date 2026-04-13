@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   useGetStockHistory,
   getGetStockHistoryQueryKey,
@@ -20,17 +20,50 @@ import {
   AreaChart,
   Area,
   ResponsiveContainer,
+  ReferenceLine,
 } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const PERIODS = ["1mo", "3mo", "6mo", "1y", "2y"] as const;
 type Period = (typeof PERIODS)[number];
 
+interface CrossEvent {
+  date: string;
+  type: "golden" | "death";
+}
+
 interface ChartModalProps {
   ticker: string | null;
   companyName?: string | null;
   onClose: () => void;
 }
+
+function detectCrosses(
+  dataPoints: Array<{ date: string; ma50?: number | null; ma200?: number | null }>
+): CrossEvent[] {
+  const crosses: CrossEvent[] = [];
+  for (let i = 1; i < dataPoints.length; i++) {
+    const prev = dataPoints[i - 1];
+    const curr = dataPoints[i];
+    if (
+      prev.ma50 == null || prev.ma200 == null ||
+      curr.ma50 == null || curr.ma200 == null
+    ) continue;
+
+    const prevAbove = prev.ma50 > prev.ma200;
+    const currAbove = curr.ma50 > curr.ma200;
+
+    if (!prevAbove && currAbove) {
+      crosses.push({ date: curr.date, type: "golden" });
+    } else if (prevAbove && !currAbove) {
+      crosses.push({ date: curr.date, type: "death" });
+    }
+  }
+  return crosses;
+}
+
+const GOLDEN_COLOR = "hsl(45 93% 55%)";
+const DEATH_COLOR = "hsl(0 84% 55%)";
 
 export function ChartModal({ ticker, companyName, onClose }: ChartModalProps) {
   const [period, setPeriod] = useState<Period>("6mo");
@@ -42,10 +75,28 @@ export function ChartModal({ ticker, companyName, onClose }: ChartModalProps) {
 
   const dataPoints = history?.dataPoints ?? [];
 
+  const crosses = useMemo(() => detectCrosses(dataPoints), [dataPoints]);
+
+  // Determine current MA relationship from last data point with both MAs
+  const currentCrossState = useMemo(() => {
+    for (let i = dataPoints.length - 1; i >= 0; i--) {
+      const d = dataPoints[i];
+      if (d.ma50 != null && d.ma200 != null) {
+        return d.ma50 > d.ma200 ? "golden" : "death";
+      }
+    }
+    return null;
+  }, [dataPoints]);
+
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr);
     return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   };
+
+  const formatDateLong = (dateStr: string) =>
+    new Date(dateStr).toLocaleDateString("en-US", {
+      month: "long", day: "numeric", year: "numeric",
+    });
 
   const priceMin = dataPoints.length
     ? Math.floor(
@@ -71,11 +122,27 @@ export function ChartModal({ ticker, companyName, onClose }: ChartModalProps) {
     <Dialog open={!!ticker} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-4xl w-full bg-card border-border text-foreground">
         <DialogHeader>
-          <DialogTitle className="font-mono text-lg text-white">
-            {ticker}
+          <DialogTitle className="font-mono text-lg text-white flex items-center gap-3 flex-wrap">
+            <span>{ticker}</span>
             {companyName && (
-              <span className="ml-2 text-sm font-sans font-normal text-muted-foreground">
+              <span className="text-sm font-sans font-normal text-muted-foreground">
                 {companyName}
+              </span>
+            )}
+            {currentCrossState === "golden" && (
+              <span
+                className="text-xs font-bold px-2 py-0.5 rounded border"
+                style={{ color: GOLDEN_COLOR, borderColor: GOLDEN_COLOR, background: "hsl(45 93% 55% / 0.12)" }}
+              >
+                ★ GOLDEN CROSS ACTIVE
+              </span>
+            )}
+            {currentCrossState === "death" && (
+              <span
+                className="text-xs font-bold px-2 py-0.5 rounded border"
+                style={{ color: DEATH_COLOR, borderColor: DEATH_COLOR, background: "hsl(0 84% 55% / 0.12)" }}
+              >
+                ✕ DEATH CROSS ACTIVE
               </span>
             )}
           </DialogTitle>
@@ -113,7 +180,7 @@ export function ChartModal({ ticker, companyName, onClose }: ChartModalProps) {
               <p className="text-xs text-muted-foreground font-mono mb-2 uppercase tracking-wider">
                 Price / Moving Averages
               </p>
-              <ResponsiveContainer width="100%" height={220}>
+              <ResponsiveContainer width="100%" height={230}>
                 <LineChart data={dataPoints} margin={{ top: 4, right: 16, left: 0, bottom: 4 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(215 28% 20%)" />
                   <XAxis
@@ -140,12 +207,28 @@ export function ChartModal({ ticker, companyName, onClose }: ChartModalProps) {
                       fontSize: "12px",
                       fontFamily: "monospace",
                     }}
-                    labelFormatter={(l) => new Date(l).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+                    labelFormatter={(l) => formatDateLong(l)}
                     formatter={(value: number, name: string) => [`$${value?.toFixed(2)}`, name]}
                   />
-                  <Legend
-                    wrapperStyle={{ fontSize: "11px", fontFamily: "monospace" }}
-                  />
+                  <Legend wrapperStyle={{ fontSize: "11px", fontFamily: "monospace" }} />
+
+                  {crosses.map((cross) => (
+                    <ReferenceLine
+                      key={`${cross.type}-${cross.date}`}
+                      x={cross.date}
+                      stroke={cross.type === "golden" ? GOLDEN_COLOR : DEATH_COLOR}
+                      strokeWidth={1.5}
+                      strokeDasharray="4 3"
+                      label={{
+                        value: cross.type === "golden" ? "☀" : "✕",
+                        position: "top",
+                        fill: cross.type === "golden" ? GOLDEN_COLOR : DEATH_COLOR,
+                        fontSize: 12,
+                        fontFamily: "monospace",
+                      }}
+                    />
+                  ))}
+
                   <Line
                     type="monotone"
                     dataKey="price"
@@ -177,6 +260,18 @@ export function ChartModal({ ticker, companyName, onClose }: ChartModalProps) {
                   />
                 </LineChart>
               </ResponsiveContainer>
+
+              {/* Cross legend */}
+              <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] font-mono border border-border rounded-md p-3 bg-muted/20">
+                <div className="flex gap-2">
+                  <span style={{ color: GOLDEN_COLOR }} className="font-bold shrink-0">☀ Golden Cross</span>
+                  <span className="text-muted-foreground">MA 50 crosses <em>above</em> MA 200 — bullish long-term signal; historically precedes sustained rallies</span>
+                </div>
+                <div className="flex gap-2">
+                  <span style={{ color: DEATH_COLOR }} className="font-bold shrink-0">✕ Death Cross</span>
+                  <span className="text-muted-foreground">MA 50 crosses <em>below</em> MA 200 — bearish long-term signal; historically precedes extended downtrends</span>
+                </div>
+              </div>
             </div>
 
             <div>
@@ -210,9 +305,11 @@ export function ChartModal({ ticker, companyName, onClose }: ChartModalProps) {
                       fontSize: "12px",
                       fontFamily: "monospace",
                     }}
-                    labelFormatter={(l) => new Date(l).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+                    labelFormatter={(l) => formatDateLong(l)}
                     formatter={(value: number) => [value?.toFixed(1), "RSI"]}
                   />
+                  <ReferenceLine y={70} stroke="hsl(0 84% 60%)" strokeDasharray="4 3" strokeWidth={1} />
+                  <ReferenceLine y={30} stroke="hsl(142 76% 50%)" strokeDasharray="4 3" strokeWidth={1} />
                   <Area
                     type="monotone"
                     dataKey="rsi"
@@ -227,7 +324,7 @@ export function ChartModal({ ticker, companyName, onClose }: ChartModalProps) {
               </ResponsiveContainer>
               <div className="flex justify-between text-[10px] font-mono text-muted-foreground mt-1 px-10">
                 <span className="text-green-500">Oversold &lt;30</span>
-                <span className="text-yellow-500">Neutral 30-70</span>
+                <span className="text-yellow-500">Neutral 30–70</span>
                 <span className="text-red-500">Overbought &gt;70</span>
               </div>
             </div>

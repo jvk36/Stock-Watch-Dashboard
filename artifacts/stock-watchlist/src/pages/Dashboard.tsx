@@ -16,11 +16,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Trash2, Plus, Loader2 } from "lucide-react";
 import {
   getPeColor, getEpsGrowthColor, getDebtEquityColor, getMaColor,
-  getRsiColor, getShortInterestColor, getPutCallColor, getBetaColor,
+  getRsiColor, getShortInterestColor, getPutCallColor,
   formatNum, formatPct, formatCurrency
 } from "@/lib/color-utils";
 
 const DEMO_USERNAME = "demo_user";
+const COL_COUNT = 13;
 
 export default function Dashboard() {
   const queryClient = useQueryClient();
@@ -64,7 +65,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-background text-foreground font-sans p-4 md:p-8">
-      <div className="max-w-[1400px] mx-auto space-y-6">
+      <div className="max-w-[1600px] mx-auto space-y-6">
         
         <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-border pb-6">
           <div>
@@ -109,8 +110,9 @@ export default function Dashboard() {
                   <th className="px-4 py-3 font-semibold border-b border-border">50d MA</th>
                   <th className="px-4 py-3 font-semibold border-b border-border">RSI</th>
                   <th className="px-4 py-3 font-semibold border-b border-border">Short Int</th>
-                  <th className="px-4 py-3 font-semibold border-b border-border">P/C Ratio</th>
+                  <th className="px-4 py-3 font-semibold border-b border-border">Put/Call</th>
                   <th className="px-4 py-3 font-semibold border-b border-border">Beta</th>
+                  <th className="px-4 py-3 font-semibold border-b border-border">IV</th>
                   <th className="px-4 py-3 font-semibold border-b border-border text-center">Act</th>
                 </tr>
               </thead>
@@ -118,14 +120,14 @@ export default function Dashboard() {
                 {isLoading ? (
                   Array.from({ length: 5 }).map((_, i) => (
                     <tr key={i}>
-                      {Array.from({ length: 12 }).map((_, j) => (
+                      {Array.from({ length: COL_COUNT }).map((_, j) => (
                         <td key={j} className="px-4 py-3"><Skeleton className="h-5 w-full bg-muted" /></td>
                       ))}
                     </tr>
                   ))
                 ) : !watchlist || watchlist.length === 0 ? (
                   <tr>
-                    <td colSpan={12} className="px-4 py-12 text-center text-muted-foreground">
+                    <td colSpan={COL_COUNT} className="px-4 py-12 text-center text-muted-foreground">
                       <p>No stocks in your watchlist.</p>
                       <p className="text-xs mt-1">Add your first stock ticker above to get started.</p>
                     </td>
@@ -136,7 +138,7 @@ export default function Dashboard() {
                     if (!m) return (
                       <tr key={entry.id} data-testid={`row-stock-${entry.ticker}`}>
                         <td className="px-4 py-2 sticky left-0 z-10 bg-card border-r border-border font-bold">{entry.ticker}</td>
-                        <td colSpan={10} className="px-4 py-2 text-muted-foreground text-xs"><Skeleton className="h-5 w-24 bg-muted" /></td>
+                        <td colSpan={COL_COUNT - 2} className="px-4 py-2 text-muted-foreground text-xs"><Skeleton className="h-5 w-24 bg-muted" /></td>
                         <td className="px-4 py-2 text-center">
                           <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={() => removeMutation.mutate({ id: entry.id })}>
                             <Trash2 className="h-4 w-4" />
@@ -166,7 +168,8 @@ export default function Dashboard() {
                         <td className={`px-4 py-2 text-right ${getRsiColor(m.rsi)}`}>{formatNum(m.rsi, 1)}</td>
                         <td className={`px-4 py-2 text-right ${getShortInterestColor(m.shortInterestPct)}`}>{formatPct(m.shortInterestPct)}</td>
                         <td className={`px-4 py-2 text-right ${getPutCallColor(m.putCallRatio)}`}>{formatNum(m.putCallRatio)}</td>
-                        <td className={`px-4 py-2 text-right ${getBetaColor(m.beta)}`}>{formatNum(m.beta)}</td>
+                        <td className="px-4 py-2 text-right">{formatNum(m.beta)}</td>
+                        <td className="px-4 py-2 text-right">{m.impliedVolatility != null ? formatPct(m.impliedVolatility) : "N/A"}</td>
                         <td className="px-4 py-2 text-center">
                           <Button 
                             variant="ghost" 
@@ -189,13 +192,28 @@ export default function Dashboard() {
           </div>
         </main>
 
-        <div className="flex flex-wrap gap-4 text-xs font-mono text-muted-foreground pt-2 border-t border-border">
-          <div className="flex items-center gap-2">
-            <span className="font-bold">LEGEND:</span>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs font-mono text-muted-foreground pt-2 border-t border-border">
+          <div className="space-y-1">
+            <p className="font-bold text-foreground uppercase tracking-wider mb-2">Color Legend</p>
+            <div className="flex items-center gap-2"><span className="w-3 h-3 inline-block bg-[hsl(142,76%,36%)] rounded-sm shrink-0"></span> Bullish / Healthy</div>
+            <div className="flex items-center gap-2"><span className="w-3 h-3 inline-block bg-[hsl(45,93%,47%)] rounded-sm shrink-0"></span> Neutral / Warning</div>
+            <div className="flex items-center gap-2"><span className="w-3 h-3 inline-block bg-[hsl(0,84%,60%)] rounded-sm shrink-0"></span> Bearish / Danger</div>
           </div>
-          <div className="flex items-center gap-1"><span className="w-3 h-3 inline-block bg-[hsl(142,76%,36%)] rounded-sm"></span> Bullish / Healthy</div>
-          <div className="flex items-center gap-1"><span className="w-3 h-3 inline-block bg-[hsl(45,93%,47%)] rounded-sm"></span> Neutral / Warning</div>
-          <div className="flex items-center gap-1"><span className="w-3 h-3 inline-block bg-[hsl(0,84%,60%)] rounded-sm"></span> Bearish / Danger</div>
+          <div className="space-y-1">
+            <p className="font-bold text-foreground uppercase tracking-wider mb-2">Beta</p>
+            <div>= 1.0 &nbsp;— moves in tandem with the market</div>
+            <div>&lt; 1.0 &nbsp;— low beta, less volatile than the market</div>
+            <div>&gt; 1.0 &nbsp;— high beta, more volatile than the market</div>
+            <div>= 0 &nbsp;&nbsp;&nbsp;— independent of the market (like cash)</div>
+            <div>&lt; 0 &nbsp;&nbsp;&nbsp;— moves inversely to the market</div>
+          </div>
+          <div className="space-y-1">
+            <p className="font-bold text-foreground uppercase tracking-wider mb-2">Implied Volatility (IV)</p>
+            <div>Expected annualized percentage move in the stock price:</div>
+            <div>&lt; 30% &nbsp;&nbsp;— low, cheap options</div>
+            <div>30–50% — moderate</div>
+            <div>&gt; 50% &nbsp;&nbsp;— high, expensive options</div>
+          </div>
         </div>
 
       </div>

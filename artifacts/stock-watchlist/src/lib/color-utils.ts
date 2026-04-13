@@ -53,13 +53,6 @@ export function getPutCallColor(pcr: number | null | undefined) {
   return bgColors.red;
 }
 
-export function getBetaColor(beta: number | null | undefined) {
-  if (beta == null) return bgColors.neutral;
-  if (beta >= 0.8 && beta <= 1.2) return bgColors.green;
-  if ((beta > 1.2 && beta <= 1.5) || (beta >= 0.5 && beta < 0.8)) return bgColors.yellow;
-  return bgColors.red;
-}
-
 export function formatNum(val: number | null | undefined, decimals = 2): string {
   if (val == null) return "N/A";
   return val.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });

@@ -68,6 +68,7 @@ export const GetStockMetricsResponse = zod.object({
   shortInterestPct: zod.number().nullish(),
   putCallRatio: zod.number().nullish(),
   beta: zod.number().nullish(),
+  impliedVolatility: zod.number().nullish(),
   lastUpdated: zod.coerce.date().nullish(),
 });
 
@@ -125,6 +126,7 @@ export const GetWatchlistMetricsResponseItem = zod.object({
   shortInterestPct: zod.number().nullish(),
   putCallRatio: zod.number().nullish(),
   beta: zod.number().nullish(),
+  impliedVolatility: zod.number().nullish(),
   lastUpdated: zod.coerce.date().nullish(),
 });
 export const GetWatchlistMetricsResponse = zod.array(

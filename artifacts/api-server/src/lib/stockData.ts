@@ -14,6 +14,7 @@ export interface StockMetrics {
   shortInterestPct: number | null;
   putCallRatio: number | null;
   beta: number | null;
+  impliedVolatility: number | null;
   lastUpdated: string | null;
 }
 
@@ -180,6 +181,68 @@ export async function getStockMetrics(ticker: string): Promise<StockMetrics> {
     logger.warn({ ticker: upperTicker, err }, "Could not fetch detailed financial data");
   }
 
+  // Fetch options chain for put/call ratio and implied volatility
+  let putCallRatio: number | null = null;
+  let impliedVolatility: number | null = null;
+
+  try {
+    const session = await getSession();
+    const optionsUrl = `https://query1.finance.yahoo.com/v7/finance/options/${encodeURIComponent(upperTicker)}?crumb=${encodeURIComponent(session.crumb)}`;
+    const optionsData = await yahooFetch(optionsUrl) as {
+      optionChain?: {
+        result?: Array<{
+          quote?: { regularMarketPrice?: number };
+          options?: Array<{
+            calls?: Array<{ openInterest?: number; impliedVolatility?: number; strike?: number }>;
+            puts?: Array<{ openInterest?: number; impliedVolatility?: number; strike?: number }>;
+          }>;
+        }>;
+      };
+    };
+
+    const chainResult = optionsData?.optionChain?.result?.[0];
+    if (chainResult?.options?.length) {
+      let totalCallsOI = 0;
+      let totalPutsOI = 0;
+
+      // Collect ATM options for IV calculation
+      const spotPrice = chainResult.quote?.regularMarketPrice ?? currentPrice ?? 0;
+      const atmIVs: number[] = [];
+
+      for (const expiry of chainResult.options) {
+        for (const call of expiry.calls ?? []) {
+          totalCallsOI += call.openInterest ?? 0;
+          if (spotPrice > 0 && call.strike != null) {
+            const moneyness = Math.abs(call.strike - spotPrice) / spotPrice;
+            if (moneyness < 0.05 && call.impliedVolatility != null && call.impliedVolatility > 0) {
+              atmIVs.push(call.impliedVolatility);
+            }
+          }
+        }
+        for (const put of expiry.puts ?? []) {
+          totalPutsOI += put.openInterest ?? 0;
+          if (spotPrice > 0 && put.strike != null) {
+            const moneyness = Math.abs(put.strike - spotPrice) / spotPrice;
+            if (moneyness < 0.05 && put.impliedVolatility != null && put.impliedVolatility > 0) {
+              atmIVs.push(put.impliedVolatility);
+            }
+          }
+        }
+      }
+
+      if (totalCallsOI > 0) {
+        putCallRatio = Math.round((totalPutsOI / totalCallsOI) * 100) / 100;
+      }
+
+      if (atmIVs.length > 0) {
+        const avgIV = atmIVs.reduce((a, b) => a + b, 0) / atmIVs.length;
+        impliedVolatility = Math.round(avgIV * 10000) / 100; // as percentage
+      }
+    }
+  } catch (err) {
+    logger.warn({ ticker: upperTicker, err }, "Could not fetch options data");
+  }
+
   return {
     ticker: upperTicker,
     companyName,
@@ -191,8 +254,9 @@ export async function getStockMetrics(ticker: string): Promise<StockMetrics> {
     ma50: ma50 != null ? Math.round(ma50 * 100) / 100 : null,
     rsi,
     shortInterestPct,
-    putCallRatio: null,
+    putCallRatio,
     beta: beta != null ? Math.round(beta * 100) / 100 : null,
+    impliedVolatility,
     lastUpdated: new Date().toISOString(),
   };
 }

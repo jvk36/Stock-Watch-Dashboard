@@ -46,6 +46,8 @@ export interface StockMetrics {
   /** @nullable */
   beta?: number | null;
   /** @nullable */
+  impliedVolatility?: number | null;
+  /** @nullable */
   lastUpdated?: string | null;
 }
 

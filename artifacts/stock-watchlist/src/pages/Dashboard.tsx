@@ -192,28 +192,90 @@ export default function Dashboard() {
           </div>
         </main>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs font-mono text-muted-foreground pt-2 border-t border-border">
-          <div className="space-y-1">
-            <p className="font-bold text-foreground uppercase tracking-wider mb-2">Color Legend</p>
-            <div className="flex items-center gap-2"><span className="w-3 h-3 inline-block bg-[hsl(142,76%,36%)] rounded-sm shrink-0"></span> Bullish / Healthy</div>
-            <div className="flex items-center gap-2"><span className="w-3 h-3 inline-block bg-[hsl(45,93%,47%)] rounded-sm shrink-0"></span> Neutral / Warning</div>
-            <div className="flex items-center gap-2"><span className="w-3 h-3 inline-block bg-[hsl(0,84%,60%)] rounded-sm shrink-0"></span> Bearish / Danger</div>
+        <div className="space-y-4 pt-3 border-t border-border text-xs font-mono text-muted-foreground">
+
+          {/* Color key + per-column thresholds */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+
+            <div className="space-y-1 bg-muted/20 rounded-md p-3 border border-border">
+              <p className="font-bold text-foreground uppercase tracking-wider mb-2">Color Key</p>
+              <div className="flex items-center gap-2"><span className="w-3 h-3 inline-block bg-[hsl(142,76%,36%)] rounded-sm shrink-0"></span> Bullish / Healthy</div>
+              <div className="flex items-center gap-2"><span className="w-3 h-3 inline-block bg-[hsl(45,93%,47%)] rounded-sm shrink-0"></span> Neutral / Warning</div>
+              <div className="flex items-center gap-2"><span className="w-3 h-3 inline-block bg-[hsl(0,84%,60%)] rounded-sm shrink-0"></span> Bearish / Danger</div>
+            </div>
+
+            <div className="space-y-1 bg-muted/20 rounded-md p-3 border border-border">
+              <p className="font-bold text-foreground uppercase tracking-wider mb-2">P/E (Fwd)</p>
+              <div className="flex items-center gap-2"><span className="w-3 h-3 inline-block bg-[hsl(142,76%,36%)] rounded-sm shrink-0"></span> &lt; 20 — value territory</div>
+              <div className="flex items-center gap-2"><span className="w-3 h-3 inline-block bg-[hsl(45,93%,47%)] rounded-sm shrink-0"></span> 20 – 40 — fairly valued</div>
+              <div className="flex items-center gap-2"><span className="w-3 h-3 inline-block bg-[hsl(0,84%,60%)] rounded-sm shrink-0"></span> &gt; 40 — expensive / speculative</div>
+            </div>
+
+            <div className="space-y-1 bg-muted/20 rounded-md p-3 border border-border">
+              <p className="font-bold text-foreground uppercase tracking-wider mb-2">EPS Gr (YoY)</p>
+              <div className="flex items-center gap-2"><span className="w-3 h-3 inline-block bg-[hsl(142,76%,36%)] rounded-sm shrink-0"></span> &gt; 15% — strong growth</div>
+              <div className="flex items-center gap-2"><span className="w-3 h-3 inline-block bg-[hsl(45,93%,47%)] rounded-sm shrink-0"></span> 5 – 15% — moderate growth</div>
+              <div className="flex items-center gap-2"><span className="w-3 h-3 inline-block bg-[hsl(0,84%,60%)] rounded-sm shrink-0"></span> &lt; 5% — slow / declining</div>
+            </div>
+
+            <div className="space-y-1 bg-muted/20 rounded-md p-3 border border-border">
+              <p className="font-bold text-foreground uppercase tracking-wider mb-2">Debt / Equity</p>
+              <div className="flex items-center gap-2"><span className="w-3 h-3 inline-block bg-[hsl(142,76%,36%)] rounded-sm shrink-0"></span> &lt; 0.5 — low leverage</div>
+              <div className="flex items-center gap-2"><span className="w-3 h-3 inline-block bg-[hsl(45,93%,47%)] rounded-sm shrink-0"></span> 0.5 – 1.5 — moderate leverage</div>
+              <div className="flex items-center gap-2"><span className="w-3 h-3 inline-block bg-[hsl(0,84%,60%)] rounded-sm shrink-0"></span> &gt; 1.5 — high leverage</div>
+            </div>
+
+            <div className="space-y-1 bg-muted/20 rounded-md p-3 border border-border">
+              <p className="font-bold text-foreground uppercase tracking-wider mb-2">200d MA / 50d MA</p>
+              <div className="flex items-center gap-2"><span className="w-3 h-3 inline-block bg-[hsl(142,76%,36%)] rounded-sm shrink-0"></span> Price above MA — uptrend</div>
+              <div className="flex items-center gap-2"><span className="w-3 h-3 inline-block bg-[hsl(45,93%,47%)] rounded-sm shrink-0"></span> Price below MA — downtrend</div>
+            </div>
+
+            <div className="space-y-1 bg-muted/20 rounded-md p-3 border border-border">
+              <p className="font-bold text-foreground uppercase tracking-wider mb-2">RSI (14)</p>
+              <div className="flex items-center gap-2"><span className="w-3 h-3 inline-block bg-[hsl(142,76%,36%)] rounded-sm shrink-0"></span> &lt; 30 — oversold / buy signal</div>
+              <div className="flex items-center gap-2"><span className="w-3 h-3 inline-block bg-[hsl(45,93%,47%)] rounded-sm shrink-0"></span> 30 – 70 — neutral momentum</div>
+              <div className="flex items-center gap-2"><span className="w-3 h-3 inline-block bg-[hsl(0,84%,60%)] rounded-sm shrink-0"></span> &gt; 70 — overbought / sell signal</div>
+            </div>
+
+            <div className="space-y-1 bg-muted/20 rounded-md p-3 border border-border">
+              <p className="font-bold text-foreground uppercase tracking-wider mb-2">Short Interest</p>
+              <div className="flex items-center gap-2"><span className="w-3 h-3 inline-block bg-[hsl(142,76%,36%)] rounded-sm shrink-0"></span> &lt; 3% — low short pressure</div>
+              <div className="flex items-center gap-2"><span className="w-3 h-3 inline-block bg-[hsl(45,93%,47%)] rounded-sm shrink-0"></span> 3 – 5% — moderate short interest</div>
+              <div className="flex items-center gap-2"><span className="w-3 h-3 inline-block bg-[hsl(0,84%,60%)] rounded-sm shrink-0"></span> &gt; 5% — heavily shorted</div>
+            </div>
+
+            <div className="space-y-1 bg-muted/20 rounded-md p-3 border border-border">
+              <p className="font-bold text-foreground uppercase tracking-wider mb-2">Put / Call Ratio</p>
+              <div className="flex items-center gap-2"><span className="w-3 h-3 inline-block bg-[hsl(142,76%,36%)] rounded-sm shrink-0"></span> &lt; 0.7 — bullish sentiment</div>
+              <div className="flex items-center gap-2"><span className="w-3 h-3 inline-block bg-[hsl(45,93%,47%)] rounded-sm shrink-0"></span> 0.7 – 1.0 — neutral sentiment</div>
+              <div className="flex items-center gap-2"><span className="w-3 h-3 inline-block bg-[hsl(0,84%,60%)] rounded-sm shrink-0"></span> &gt; 1.0 — bearish / hedging activity</div>
+            </div>
+
           </div>
-          <div className="space-y-1">
-            <p className="font-bold text-foreground uppercase tracking-wider mb-2">Beta</p>
-            <div>= 1.0 &nbsp;— moves in tandem with the market</div>
-            <div>&lt; 1.0 &nbsp;— low beta, less volatile than the market</div>
-            <div>&gt; 1.0 &nbsp;— high beta, more volatile than the market</div>
-            <div>= 0 &nbsp;&nbsp;&nbsp;— independent of the market (like cash)</div>
-            <div>&lt; 0 &nbsp;&nbsp;&nbsp;— moves inversely to the market</div>
+
+          {/* No-color columns */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+
+            <div className="space-y-1 bg-muted/20 rounded-md p-3 border border-border">
+              <p className="font-bold text-foreground uppercase tracking-wider mb-2">Beta <span className="text-muted-foreground font-normal normal-case tracking-normal">(no color coding)</span></p>
+              <div>= 1.0 &nbsp;— moves in tandem with the market</div>
+              <div>&lt; 1.0 &nbsp;— low beta, less volatile than the market</div>
+              <div>&gt; 1.0 &nbsp;— high beta, more volatile than the market</div>
+              <div>= 0 &nbsp;&nbsp;&nbsp;— independent of the market (like cash)</div>
+              <div>&lt; 0 &nbsp;&nbsp;&nbsp;— moves inversely to the market</div>
+            </div>
+
+            <div className="space-y-1 bg-muted/20 rounded-md p-3 border border-border">
+              <p className="font-bold text-foreground uppercase tracking-wider mb-2">Implied Volatility (IV) <span className="text-muted-foreground font-normal normal-case tracking-normal">(no color coding)</span></p>
+              <div>Expected annualized % move in the stock price:</div>
+              <div>&lt; 30% &nbsp;&nbsp;— low, cheap options</div>
+              <div>30 – 50% — moderate</div>
+              <div>&gt; 50% &nbsp;&nbsp;— high, expensive options</div>
+            </div>
+
           </div>
-          <div className="space-y-1">
-            <p className="font-bold text-foreground uppercase tracking-wider mb-2">Implied Volatility (IV)</p>
-            <div>Expected annualized percentage move in the stock price:</div>
-            <div>&lt; 30% &nbsp;&nbsp;— low, cheap options</div>
-            <div>30–50% — moderate</div>
-            <div>&gt; 50% &nbsp;&nbsp;— high, expensive options</div>
-          </div>
+
         </div>
 
       </div>

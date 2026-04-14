@@ -206,9 +206,10 @@ export default function Dashboard() {
 
             <div className="space-y-1 bg-muted/20 rounded-md p-3 border border-border">
               <p className="font-bold text-foreground uppercase tracking-wider mb-2">P/E (Fwd)</p>
-              <div className="flex items-center gap-2"><span className="w-3 h-3 inline-block bg-[hsl(142,76%,36%)] rounded-sm shrink-0"></span> &lt; 20 — value territory</div>
+              <div className="flex items-center gap-2"><span className="w-3 h-3 inline-block bg-[hsl(142,76%,36%)] rounded-sm shrink-0"></span> 1 – 19 — value territory</div>
               <div className="flex items-center gap-2"><span className="w-3 h-3 inline-block bg-[hsl(45,93%,47%)] rounded-sm shrink-0"></span> 20 – 40 — fairly valued</div>
               <div className="flex items-center gap-2"><span className="w-3 h-3 inline-block bg-[hsl(0,84%,60%)] rounded-sm shrink-0"></span> &gt; 40 — expensive / speculative</div>
+              <div className="flex items-center gap-2"><span className="w-3 h-3 inline-block bg-[hsl(0,84%,60%)] rounded-sm shrink-0"></span> &le; 0 — negative earnings</div>
             </div>
 
             <div className="space-y-1 bg-muted/20 rounded-md p-3 border border-border">

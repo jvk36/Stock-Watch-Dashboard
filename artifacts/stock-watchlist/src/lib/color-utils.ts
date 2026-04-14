@@ -7,6 +7,7 @@ export const bgColors = {
 
 export function getPeColor(pe: number | null | undefined) {
   if (pe == null) return bgColors.neutral;
+  if (pe <= 0) return bgColors.red;
   if (pe < 20) return bgColors.green;
   if (pe <= 40) return bgColors.yellow;
   return bgColors.red;

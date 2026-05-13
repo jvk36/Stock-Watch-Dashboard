@@ -69,7 +69,7 @@ export default function Dashboard() {
         
         <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-border pb-6">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-white font-mono uppercase">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground font-mono uppercase">
               Stock Watchlist <span className="text-primary">Supercharger</span>
             </h1>
             <p className="text-sm text-muted-foreground mt-1">Professional high-density terminal view</p>

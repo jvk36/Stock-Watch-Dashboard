@@ -62,8 +62,24 @@ function detectCrosses(
   return crosses;
 }
 
-const GOLDEN_COLOR = "hsl(45 93% 55%)";
-const DEATH_COLOR = "hsl(0 84% 55%)";
+// Chart colors tuned for light green background
+const CHART = {
+  grid:         "hsl(130 18% 80%)",
+  axis:         "hsl(140 15% 42%)",
+  axisLine:     "hsl(130 18% 72%)",
+  tooltipBg:    "hsl(120 25% 98%)",
+  tooltipBorder:"hsl(130 18% 74%)",
+  tooltipText:  "hsl(150 40% 10%)",
+  price:        "hsl(210 75% 40%)",
+  ma50:         "hsl(25 88% 48%)",
+  ma200:        "hsl(142 55% 28%)",
+  rsi:          "hsl(280 60% 48%)",
+  rsiFill:      "hsl(280 60% 48% / 0.15)",
+  legendText:   "hsl(140 15% 30%)",
+};
+
+const GOLDEN_COLOR = "hsl(40 90% 38%)";
+const DEATH_COLOR  = "hsl(0 72% 48%)";
 
 export function ChartModal({ ticker, companyName, onClose }: ChartModalProps) {
   const [period, setPeriod] = useState<Period>("6mo");
@@ -77,7 +93,6 @@ export function ChartModal({ ticker, companyName, onClose }: ChartModalProps) {
 
   const crosses = useMemo(() => detectCrosses(dataPoints), [dataPoints]);
 
-  // Determine current MA relationship from last data point with both MAs
   const currentCrossState = useMemo(() => {
     for (let i = dataPoints.length - 1; i >= 0; i--) {
       const d = dataPoints[i];
@@ -118,11 +133,20 @@ export function ChartModal({ ticker, companyName, onClose }: ChartModalProps) {
       )
     : undefined;
 
+  const tooltipStyle = {
+    backgroundColor: CHART.tooltipBg,
+    border: `1px solid ${CHART.tooltipBorder}`,
+    borderRadius: "6px",
+    fontSize: "12px",
+    fontFamily: "monospace",
+    color: CHART.tooltipText,
+  };
+
   return (
     <Dialog open={!!ticker} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-4xl w-full bg-card border-border text-foreground">
         <DialogHeader>
-          <DialogTitle className="font-mono text-lg text-white flex items-center gap-3 flex-wrap">
+          <DialogTitle className="font-mono text-lg text-foreground flex items-center gap-3 flex-wrap">
             <span>{ticker}</span>
             {companyName && (
               <span className="text-sm font-sans font-normal text-muted-foreground">
@@ -132,7 +156,7 @@ export function ChartModal({ ticker, companyName, onClose }: ChartModalProps) {
             {currentCrossState === "golden" && (
               <span
                 className="text-xs font-bold px-2 py-0.5 rounded border"
-                style={{ color: GOLDEN_COLOR, borderColor: GOLDEN_COLOR, background: "hsl(45 93% 55% / 0.12)" }}
+                style={{ color: GOLDEN_COLOR, borderColor: GOLDEN_COLOR, background: "hsl(45 90% 90%)" }}
               >
                 ★ GOLDEN CROSS ACTIVE
               </span>
@@ -140,7 +164,7 @@ export function ChartModal({ ticker, companyName, onClose }: ChartModalProps) {
             {currentCrossState === "death" && (
               <span
                 className="text-xs font-bold px-2 py-0.5 rounded border"
-                style={{ color: DEATH_COLOR, borderColor: DEATH_COLOR, background: "hsl(0 84% 55% / 0.12)" }}
+                style={{ color: DEATH_COLOR, borderColor: DEATH_COLOR, background: "hsl(0 70% 94%)" }}
               >
                 ✕ DEATH CROSS ACTIVE
               </span>
@@ -182,35 +206,30 @@ export function ChartModal({ ticker, companyName, onClose }: ChartModalProps) {
               </p>
               <ResponsiveContainer width="100%" height={230}>
                 <LineChart data={dataPoints} margin={{ top: 4, right: 16, left: 0, bottom: 4 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(215 28% 20%)" />
+                  <CartesianGrid strokeDasharray="3 3" stroke={CHART.grid} />
                   <XAxis
                     dataKey="date"
                     tickFormatter={formatDate}
-                    tick={{ fill: "hsl(215 20% 55%)", fontSize: 10, fontFamily: "monospace" }}
-                    axisLine={{ stroke: "hsl(215 28% 25%)" }}
+                    tick={{ fill: CHART.axis, fontSize: 10, fontFamily: "monospace" }}
+                    axisLine={{ stroke: CHART.axisLine }}
                     tickLine={false}
                     interval="preserveStartEnd"
                   />
                   <YAxis
                     domain={[priceMin ?? "auto", priceMax ?? "auto"]}
-                    tick={{ fill: "hsl(215 20% 55%)", fontSize: 10, fontFamily: "monospace" }}
-                    axisLine={{ stroke: "hsl(215 28% 25%)" }}
+                    tick={{ fill: CHART.axis, fontSize: 10, fontFamily: "monospace" }}
+                    axisLine={{ stroke: CHART.axisLine }}
                     tickLine={false}
                     tickFormatter={(v) => `$${v}`}
                     width={60}
                   />
                   <Tooltip
-                    contentStyle={{
-                      backgroundColor: "hsl(222 47% 11%)",
-                      border: "1px solid hsl(215 28% 25%)",
-                      borderRadius: "6px",
-                      fontSize: "12px",
-                      fontFamily: "monospace",
-                    }}
+                    contentStyle={tooltipStyle}
+                    labelStyle={{ color: CHART.tooltipText }}
                     labelFormatter={(l) => formatDateLong(l)}
                     formatter={(value: number, name: string) => [`$${value?.toFixed(2)}`, name]}
                   />
-                  <Legend wrapperStyle={{ fontSize: "11px", fontFamily: "monospace" }} />
+                  <Legend wrapperStyle={{ fontSize: "11px", fontFamily: "monospace", color: CHART.legendText }} />
 
                   {crosses.map((cross) => (
                     <ReferenceLine
@@ -232,7 +251,7 @@ export function ChartModal({ ticker, companyName, onClose }: ChartModalProps) {
                   <Line
                     type="monotone"
                     dataKey="price"
-                    stroke="hsl(210 100% 66%)"
+                    stroke={CHART.price}
                     strokeWidth={2}
                     dot={false}
                     name="Price"
@@ -241,7 +260,7 @@ export function ChartModal({ ticker, companyName, onClose }: ChartModalProps) {
                   <Line
                     type="monotone"
                     dataKey="ma50"
-                    stroke="hsl(45 93% 60%)"
+                    stroke={CHART.ma50}
                     strokeWidth={1.5}
                     dot={false}
                     name="MA 50"
@@ -251,7 +270,7 @@ export function ChartModal({ ticker, companyName, onClose }: ChartModalProps) {
                   <Line
                     type="monotone"
                     dataKey="ma200"
-                    stroke="hsl(142 76% 50%)"
+                    stroke={CHART.ma200}
                     strokeWidth={1.5}
                     dot={false}
                     name="MA 200"
@@ -262,7 +281,7 @@ export function ChartModal({ ticker, companyName, onClose }: ChartModalProps) {
               </ResponsiveContainer>
 
               {/* Cross legend */}
-              <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] font-mono border border-border rounded-md p-3 bg-muted/20">
+              <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] font-mono border border-border rounded-md p-3 bg-muted/40">
                 <div className="flex gap-2">
                   <span style={{ color: GOLDEN_COLOR }} className="font-bold shrink-0">☀ Golden Cross</span>
                   <span className="text-muted-foreground">MA 50 crosses <em>above</em> MA 200 — bullish long-term signal; historically precedes sustained rallies</span>
@@ -280,41 +299,36 @@ export function ChartModal({ ticker, companyName, onClose }: ChartModalProps) {
               </p>
               <ResponsiveContainer width="100%" height={130}>
                 <AreaChart data={dataPoints} margin={{ top: 4, right: 16, left: 0, bottom: 4 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(215 28% 20%)" />
+                  <CartesianGrid strokeDasharray="3 3" stroke={CHART.grid} />
                   <XAxis
                     dataKey="date"
                     tickFormatter={formatDate}
-                    tick={{ fill: "hsl(215 20% 55%)", fontSize: 10, fontFamily: "monospace" }}
-                    axisLine={{ stroke: "hsl(215 28% 25%)" }}
+                    tick={{ fill: CHART.axis, fontSize: 10, fontFamily: "monospace" }}
+                    axisLine={{ stroke: CHART.axisLine }}
                     tickLine={false}
                     interval="preserveStartEnd"
                   />
                   <YAxis
                     domain={[0, 100]}
                     ticks={[0, 30, 50, 70, 100]}
-                    tick={{ fill: "hsl(215 20% 55%)", fontSize: 10, fontFamily: "monospace" }}
-                    axisLine={{ stroke: "hsl(215 28% 25%)" }}
+                    tick={{ fill: CHART.axis, fontSize: 10, fontFamily: "monospace" }}
+                    axisLine={{ stroke: CHART.axisLine }}
                     tickLine={false}
                     width={36}
                   />
                   <Tooltip
-                    contentStyle={{
-                      backgroundColor: "hsl(222 47% 11%)",
-                      border: "1px solid hsl(215 28% 25%)",
-                      borderRadius: "6px",
-                      fontSize: "12px",
-                      fontFamily: "monospace",
-                    }}
+                    contentStyle={tooltipStyle}
+                    labelStyle={{ color: CHART.tooltipText }}
                     labelFormatter={(l) => formatDateLong(l)}
                     formatter={(value: number) => [value?.toFixed(1), "RSI"]}
                   />
-                  <ReferenceLine y={70} stroke="hsl(0 84% 60%)" strokeDasharray="4 3" strokeWidth={1} />
-                  <ReferenceLine y={30} stroke="hsl(142 76% 50%)" strokeDasharray="4 3" strokeWidth={1} />
+                  <ReferenceLine y={70} stroke="hsl(0 72% 48%)" strokeDasharray="4 3" strokeWidth={1} />
+                  <ReferenceLine y={30} stroke="hsl(142 55% 28%)" strokeDasharray="4 3" strokeWidth={1} />
                   <Area
                     type="monotone"
                     dataKey="rsi"
-                    stroke="hsl(280 100% 65%)"
-                    fill="hsl(280 100% 65% / 0.15)"
+                    stroke={CHART.rsi}
+                    fill={CHART.rsiFill}
                     strokeWidth={1.5}
                     dot={false}
                     name="RSI"
@@ -323,9 +337,9 @@ export function ChartModal({ ticker, companyName, onClose }: ChartModalProps) {
                 </AreaChart>
               </ResponsiveContainer>
               <div className="flex justify-between text-[10px] font-mono text-muted-foreground mt-1 px-10">
-                <span className="text-green-500">Oversold &lt;30</span>
-                <span className="text-yellow-500">Neutral 30–70</span>
-                <span className="text-red-500">Overbought &gt;70</span>
+                <span style={{ color: "hsl(142 55% 28%)" }}>Oversold &lt;30</span>
+                <span style={{ color: "hsl(35 80% 40%)" }}>Neutral 30–70</span>
+                <span style={{ color: "hsl(0 72% 48%)" }}>Overbought &gt;70</span>
               </div>
             </div>
           </div>
